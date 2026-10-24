@@ -1,0 +1,34 @@
+name: Sync to Hugging Face
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      HF_USER: ${{ vars.HF_USERNAME }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check Hugging Face settings
+        run: |
+          if [ -z "$HF_TOKEN" ] || [ -z "$HF_USER" ]; then
+            echo "::warning::Add the HF_TOKEN secret and HF_USERNAME variable in GitHub Settings > Secrets and variables > Actions. Skipping deploy."
+            echo "SKIP=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Push website Space (whole repo)
+        if: env.SKIP != '1'
+        run: git push --force "https://${HF_USER}:${HF_TOKEN}@huggingface.co/spaces/${HF_USER}/word-audit" HEAD:main
+
+      - name: Push API Space (backend folder only)
+        if: env.SKIP != '1'
+        run: |
+          git subtree split --prefix backend -b backend-only
+          git push --force "https://${HF_USER}:${HF_TOKEN}@huggingface.co/spaces/${HF_USER}/word-audit-api" backend-only:main

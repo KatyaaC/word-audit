@@ -1,3 +1,13 @@
+---
+title: WordAudit
+emoji: 🛡️
+colorFrom: green
+colorTo: gray
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # WordAudit
 
 **Catch risky wording and unsupported claims before they go live.**
