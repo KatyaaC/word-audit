@@ -6,3 +6,4 @@ __pycache__
 .venv
 *.tsbuildinfo
 next-env.d.ts
+.DS_Store
