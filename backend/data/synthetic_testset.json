@@ -1,0 +1,14 @@
+[
+ {"id": "S01", "text": "Support resolution time fell by up to 60% among pilot participants in 2025. Results may vary.", "expected": []},
+ {"id": "S02", "text": "Support resolution time fell by up to 80% among pilot participants in 2025. Results may vary.", "expected": ["claim:Contradicted"]},
+ {"id": "S03", "text": "Our platform guarantees 60% faster support resolution time for every customer. Results may vary.", "expected": ["drift"]},
+ {"id": "S04", "text": "Over 3,000 customers use the platform in 2026.", "expected": ["claim:Contradicted"]},
+ {"id": "S05", "text": "More than 2,500 customers use the platform as of 2026.", "expected": []},
+ {"id": "S06", "text": "Our app is rated 4.9 stars by editors.", "expected": ["claim:Unsupported"]},
+ {"id": "S07", "text": "This miracle formula changes everything.", "expected": ["banned_term"]},
+ {"id": "S08", "text": "Welcome to our spring launch event.", "expected": []},
+ {"id": "S09", "text": "We cure slow support queues. Results may vary.", "expected": ["banned_term"]},
+ {"id": "S10", "text": "92% of surveyed customers reported satisfaction in 2024. Results may vary.", "expected": ["claim:Uncertain"]},
+ {"id": "S11", "text": "Support resolution time fell by 60% for every customer in 2025. Results may vary.", "expected": ["drift"]},
+ {"id": "S12", "text": "Trusted by the world's leading brands.", "expected": ["claim:Unsupported"]}
+]

@@ -1,0 +1,18 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: brandtrust
+      POSTGRES_PASSWORD: brandtrust
+      POSTGRES_DB: brandtrust
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+  api:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://brandtrust:brandtrust@db:5432/brandtrust
+    depends_on: [db]
+    ports: ["8000:8000"]
+volumes:
+  pgdata:

@@ -1,0 +1,4 @@
+# Heavy, optional. Without these the app falls back to hashing embeddings and regex-only redaction.
+sentence-transformers>=2.7     # bge-small-en embeddings (BAAI/bge-small-en-v1.5)
+presidio-analyzer>=2.2         # PII detection (also: python -m spacy download en_core_web_lg)
+spacy>=3.7
