@@ -1,0 +1,32 @@
+{
+  "_note": "SYNTHETIC test items written by the team (Katya's 25: rule, tone and accessibility errors). Labels are the Layer A rule IDs we expect to fire. Empty lists are clean items used to measure false alarms.",
+  "items": [
+    {"id": "R01", "category": "rule", "text": "Start investing today with guaranteed returns on every plan.", "expected": ["BAN-001"]},
+    {"id": "R02", "category": "rule", "text": "Our savings account is completely risk-free.", "expected": ["BAN-002"]},
+    {"id": "R03", "category": "rule", "text": "This supplement can cure fatigue in a week.", "expected": ["BAN-004"]},
+    {"id": "R04", "category": "rule", "text": "PaisaLeaf is the best in India for digital gold.", "expected": ["BAN-005"]},
+    {"id": "R05", "category": "rule", "text": "Get a free account with zero fees this month.", "expected": ["REQ-001"]},
+    {"id": "R06", "category": "rule", "text": "Get a free account with zero fees this month. T&C apply.", "expected": []},
+    {"id": "R07", "category": "rule", "text": "Start a mutual fund SIP from Rs 500 a month.", "expected": ["REQ-002"]},
+    {"id": "R08", "category": "rule", "text": "Our herbal tea is 100% safe and has no side effects.", "expected": ["BAN-003", "BAN-006"]},
+    {"id": "R09", "category": "rule", "text": "Plans are reviewed by certified advisers and fees are shown upfront.", "expected": []},
+    {"id": "R10", "category": "rule", "text": "We guaranteed delivery within two days, the cheapest in town.", "expected": ["BAN-001", "BAN-008"]},
+    {"id": "R11", "category": "rule", "text": "Historical returns averaged 9% over five years.", "expected": ["REQ-003"]},
+    {"id": "R12", "category": "rule", "text": "This revolutionary feature creates real synergy for your team.", "expected": ["BAN-007", "BAN-007"]},
+
+    {"id": "T01", "category": "tone", "text": "Sign up now!!! Limited seats!", "expected": ["TONE-001"]},
+    {"id": "T02", "category": "tone", "text": "This is the BIGGEST sale of the year.", "expected": ["TONE-002"]},
+    {"id": "T03", "category": "tone", "text": "Complete your KYC and link UPI in minutes.", "expected": []},
+    {"id": "T04", "category": "tone", "text": "Thank you for banking with us!", "expected": []},
+    {"id": "T05", "category": "tone", "text": "DON'T MISS this offer! T&C apply.", "expected": ["TONE-002"]},
+    {"id": "T06", "category": "tone", "text": "Amazing!! Truly a game-changer for small shops.", "expected": ["TONE-001", "BAN-007"]},
+    {"id": "T07", "category": "tone", "text": "Read the FAQ or download the PDF guide.", "expected": []},
+
+    {"id": "X01", "category": "accessibility", "text": "Meet our new card.", "html": "<p>Meet our new card.</p><img src=\"card.png\">", "expected": ["A11Y-002"]},
+    {"id": "X02", "category": "accessibility", "text": "Spring launch.", "html": "<p>Spring launch.</p><img src=\"hero.jpg\" alt=\"IMG_0042.jpg\">", "expected": ["A11Y-003"]},
+    {"id": "X03", "category": "accessibility", "text": "Your card, your way.", "html": "<p>Your card, your way.</p><img src=\"card2.png\" alt=\"A blue PaisaLeaf debit card on a wooden desk\">", "expected": []},
+    {"id": "X04", "category": "accessibility", "text": "Open an account", "colour_pairs": [{"element": "Body text", "foreground": "#777777", "background": "#ffffff", "large_text": false}], "expected": ["A11Y-001"]},
+    {"id": "X05", "category": "accessibility", "text": "Open an account", "colour_pairs": [{"element": "Primary button", "foreground": "#ffffff", "background": "#1a56db", "large_text": false}], "expected": []},
+    {"id": "X06", "category": "accessibility", "text": "Big savings ahead", "colour_pairs": [{"element": "Hero heading", "foreground": "#9ca3af", "background": "#ffffff", "large_text": true}], "expected": ["A11Y-001"]}
+  ]
+}
