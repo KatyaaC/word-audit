@@ -497,6 +497,7 @@ def passport_out(s: Session, pid: str) -> dict:
         "approved_at": payload["compliant_as_of"], "mode": payload["approval_mode"],
         "automation_disclosure": AUTOMATION_NOTE, "compliant_as_of": payload["compliant_as_of"],
         "current_status": status, "current_status_reason": reason,
+        "rules_version_now": _ver_label(cons.number if (cons := registry.current_constitution(s)) else 0),
     }
 
 
@@ -707,3 +708,91 @@ def decide_rule(rule_id: str, body: RuleDecisionIn, s: Session = Depends(get_ses
 
 
 __all__ = ["router", "DEMO_USERS"]
+
+
+# ---------------------------------------------------------------- claim ledger (improvement 3)
+
+LEDGER_EDITABLE = {"statement", "metric", "value", "unit", "qualifier", "scope", "period", "evidence_url", "owner",
+                   "expires_on", "status"}
+
+
+def _usage(s: Session, key: str) -> tuple:
+    """Current content versions and Passports that rely on a ledger fact."""
+    content_ids, passport_ids = set(), set()
+    for rec in s.exec(select(models.ClaimRecord).where(models.ClaimRecord.ledger_claim_key == key)).all():
+        cv = s.get(models.ContentVersion, rec.content_version_id)
+        c = s.get(models.Content, cv.content_id) if cv else None
+        if not c or cv.version_no != c.current_version_no:
+            continue
+        content_ids.add(str(c.id))
+        passport_ids.update(p.id for p in s.exec(select(models.Passport)
+                                                 .where(models.Passport.content_version_id == cv.id)).all())
+    return sorted(content_ids), sorted(passport_ids)
+
+
+def fact_out(s: Session, led: models.LedgerClaim) -> dict:
+    exp = parse_iso_date(led.expires_on)
+    used_c, used_p = _usage(s, led.claim_key)
+    return {"id": led.claim_key, "statement": led.statement, "metric": led.metric, "value": led.value,
+            "unit": led.unit, "qualifier": led.qualifier, "scope": led.scope, "period": led.period,
+            "evidence_url": led.evidence_url, "owner": led.owner, "expires_on": led.expires_on,
+            "status": led.status, "version": led.version,
+            "days_left": (exp - date.today()).days if exp else None,
+            "used_by_content": used_c, "used_by_passports": used_p, "updated_at": led.updated_at}
+
+
+class FactPatchIn(BaseModel):
+    statement: Optional[str] = None
+    metric: Optional[str] = None
+    value: Optional[float] = None
+    unit: Optional[str] = None
+    qualifier: Optional[str] = None
+    scope: Optional[str] = None
+    period: Optional[str] = None
+    evidence_url: Optional[str] = None
+    owner: Optional[str] = None
+    expires_on: Optional[str] = None
+    status: Optional[Literal["active", "expired", "superseded"]] = None
+
+
+@router.get("/ledger")
+def list_facts(s: Session = Depends(get_session), _: UserOut = Depends(current_user)):
+    facts = [fact_out(s, led) for led in s.exec(select(models.LedgerClaim)).all()]
+    # most urgent first: expired, then soonest expiry
+    return sorted(facts, key=lambda f: (f["status"] == "active", f["days_left"] if f["days_left"] is not None else 10**6))
+
+
+@router.patch("/ledger/{fact_key}")
+def update_fact(fact_key: str, body: FactPatchIn, s: Session = Depends(get_session),
+                user: UserOut = Depends(require_roles("brand_manager"))):
+    led = s.exec(select(models.LedgerClaim).where(models.LedgerClaim.claim_key == fact_key)).first()
+    if not led:
+        raise NotFound("Fact not found")
+    changes = {k: v for k, v in body.model_dump(exclude_unset=True).items() if k in LEDGER_EDITABLE}
+    if "expires_on" in changes and changes["expires_on"] and not parse_iso_date(changes["expires_on"]):
+        raise Conflict("Use a date like 2027-03-31 for the expiry.")
+    out = impact.update_ledger_claim(s, led.id, changes, user.name)
+    s.commit()
+    hit = out["impact"] or {"content_ids": [], "passport_ids": []}
+    return {"fact": fact_out(s, led), "changed": out["changed"],
+            "flagged_content": [str(i) for i in hit["content_ids"]], "flagged_passports": list(hit["passport_ids"])}
+
+
+# ---------------------------------------------------------------- rule health (guideline linter)
+
+
+@router.post("/constitution/lint")
+def lint(s: Session = Depends(get_session), user: UserOut = Depends(require_roles("brand_manager"))):
+    from .services import linter
+
+    found = linter.lint_rules(s, build_router())
+    keys = {r.rule_key: r for r in s.exec(select(models.Rule)).all()}
+    out = []
+    for f in found:
+        out.append({"kind": f["kind"], "method": f["method"], "score": f.get("score"),
+                    "explanation": f["explanation"],
+                    "rules": [{"key": k, "id": str(keys[k].id) if k in keys else None,
+                               "text": keys[k].text if k in keys else ""} for k in f["rules"]],
+                    "vague_terms": (f.get("details") or {}).get("vague_terms", [])})
+    n = len(s.exec(select(models.Rule).where(models.Rule.status.in_(["draft", "active"]))).all())
+    return {"findings": out, "rules_checked": n, "checked_at": _now()}

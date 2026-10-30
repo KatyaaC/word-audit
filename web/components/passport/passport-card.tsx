@@ -51,7 +51,14 @@ export function PassportCard({ passport: p }: { passport: Passport }) {
               {p.signature_algorithm} {shortHash(p.signature, 28)}
             </code>
           </Row>
-          <Row label="Brand rules version">{p.guideline_version}</Row>
+          <Row label="Brand rules version">
+            {p.guideline_version}
+            {p.rules_version_now && p.rules_version_now !== p.guideline_version && (
+              <span className="block text-xs text-amber-700">
+                The brand rules have changed since (now {p.rules_version_now}). This approval still stands for the rules it was checked against.
+              </span>
+            )}
+          </Row>
           <Row label="Created by">{p.creator}</Row>
           <Row label="Approved by">
             {p.approved_by} on {formatDate(p.approved_at)} · {p.mode === "strict" ? "a different person from the creator" : "self-approved (Solo mode)"}

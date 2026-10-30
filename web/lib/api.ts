@@ -11,6 +11,10 @@ import type {
   ContentSubmission,
   Decision,
   ExpireFactResult,
+  Fact,
+  FactPatch,
+  FactUpdateResult,
+  LintResult,
   Insights,
   LayerACheckRequest,
   LayerACheckResponse,
@@ -108,6 +112,13 @@ export const api = {
 
   expireFact: (factId: string): Promise<ExpireFactResult> =>
     USE_MOCKS ? mock.expireFact(factId) : post(`/ledger/facts/${factId}/expire`),
+
+  listFacts: (): Promise<Fact[]> => (USE_MOCKS ? mock.listFacts() : http("/ledger")),
+
+  updateFact: (factId: string, patch: FactPatch): Promise<FactUpdateResult> =>
+    USE_MOCKS ? mock.updateFact(factId, patch, me()) : http(`/ledger/${factId}`, { method: "PATCH", body: JSON.stringify(patch) }),
+
+  lintRules: (): Promise<LintResult> => (USE_MOCKS ? mock.lintRules(me()) : post("/constitution/lint")),
 
   getInsights: (): Promise<Insights> => (USE_MOCKS ? mock.getInsights() : http("/insights")),
 

@@ -149,3 +149,33 @@ def test_constitution_upload_and_approve(client):
     assert client.post(f"/api/constitution/rules/{doc['rules'][1]['id']}/decision", headers=auth(client, "creator"),
                        json={"decision": "approve", "reason": ""}).status_code == 403
     assert any(d["id"] == "pack" for d in after["documents"])
+
+
+def test_ledger_edit_flags_dependent_content(client):
+    hc, hm = auth(client, "creator"), auth(client, "manager")
+    cid = submit_draft(client, hc)["id"]
+    facts = {f["id"]: f for f in client.get("/api/ledger", headers=hm).json()}
+    assert cid in facts["CL-PL-001"]["used_by_content"]
+    assert facts["CL-PL-002"]["days_left"] is not None
+
+    # Only the brand manager edits facts
+    assert client.patch("/api/ledger/CL-PL-001", headers=hc, json={"value": 55}).status_code == 403
+    assert client.patch("/api/ledger/CL-PL-001", headers=hm, json={"expires_on": "soon"}).status_code == 409
+
+    out = client.patch("/api/ledger/CL-PL-001", headers=hm, json={"value": 55}).json()
+    assert out["changed"] == ["value"] and cid in out["flagged_content"]
+    assert out["fact"]["version"] == 2
+    assert client.get(f"/api/content/{cid}", headers=hc).json()["state"] == "needs_rereview"
+
+    # A non-material edit (owner) flags nothing
+    out = client.patch("/api/ledger/CL-PL-001", headers=hm, json={"owner": "New owner"}).json()
+    assert out["flagged_content"] == []
+
+
+def test_rule_health_and_passport_rules_version(client):
+    hm = auth(client, "manager")
+    res = client.post("/api/constitution/lint", headers=hm).json()
+    assert res["rules_checked"] >= 3
+    # the seeded tone rule ("professional but friendly ... natural and approachable") is vague
+    assert any(f["kind"] == "ambiguity" and f["rules"][0]["key"] == "R-TONE-001" for f in res["findings"])
+    assert client.post("/api/constitution/lint", headers=auth(client, "creator")).status_code == 403

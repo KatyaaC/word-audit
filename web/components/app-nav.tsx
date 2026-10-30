@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { FileText, LayoutDashboard, LogOut, PenLine, ScrollText, ShieldCheck } from "lucide-react";
+import { BookCheck, FileText, LayoutDashboard, LogOut, PenLine, ScrollText, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { ROLE_LABEL, type Role } from "@/lib/types";
 import { Button } from "@/components/ui/primitives";
@@ -14,6 +14,7 @@ const NAV: { href: string; label: string; icon: typeof FileText; roles: Role[] }
   { href: "/content", label: "Content", icon: FileText, roles: ALL },
   { href: "/editor", label: "New draft", icon: PenLine, roles: ["creator"] },
   { href: "/insights", label: "Insights", icon: LayoutDashboard, roles: ["reviewer", "approver", "brand_manager"] },
+  { href: "/ledger", label: "Facts", icon: BookCheck, roles: ALL },
   { href: "/constitution", label: "Brand rules", icon: ScrollText, roles: ALL },
 ];
 

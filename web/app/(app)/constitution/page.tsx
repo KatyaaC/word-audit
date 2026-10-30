@@ -16,6 +16,7 @@ import {
   NativeSelect,
 } from "@/components/ui/primitives";
 import { SeverityBadge } from "@/components/labels";
+import { RuleHealth } from "@/components/rule-health";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { Classification, Constitution, Rule } from "@/lib/types";
@@ -181,6 +182,8 @@ export default function ConstitutionPage() {
       )}
       <ErrorNote message={error} />
 
+      {isManager && <RuleHealth />}
+
       {data.documents.map((doc) => {
         const rules = doc.rules.filter((r) => !onlyDrafts || r.status === "draft");
         if (onlyDrafts && rules.length === 0) return null;
@@ -192,7 +195,7 @@ export default function ConstitutionPage() {
                 <Badge variant={doc.classification === "restricted" ? "high" : "muted"}>{doc.classification}</Badge>
               </div>
               <CardDescription>
-                Uploaded by {doc.uploaded_by} on {formatDate(doc.uploaded_at)} · {doc.rules.length} rules
+                {doc.uploaded_at ? `Uploaded by ${doc.uploaded_by} on ${formatDate(doc.uploaded_at)}` : `Maintained by ${doc.uploaded_by}`} · {doc.rules.length} rules
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">

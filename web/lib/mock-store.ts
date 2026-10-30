@@ -19,6 +19,10 @@ import type {
   ContentSubmission,
   Decision,
   ExpireFactResult,
+  Fact,
+  FactPatch,
+  FactUpdateResult,
+  LintResult,
   Finding,
   Insights,
   LayerACheckRequest,
@@ -44,7 +48,7 @@ export const DEMO_USERS: User[] = [
 
 // ---------- Ledger facts (Sudiksha owns the real Claim Ledger) ----------
 
-interface Fact {
+interface Fact_ {
   id: string;
   text: string;
   evidence_url: string;
@@ -57,7 +61,7 @@ const daysFromNow = (d: number) => new Date(Date.now() + d * 86_400_000).toISOSt
 const now = () => new Date().toISOString();
 const wait = (ms = 120) => new Promise((r) => setTimeout(r, ms));
 
-function seedFacts(): Fact[] {
+function seedFacts(): Fact_[] {
   return [
     {
       id: "F-003",
@@ -115,7 +119,7 @@ function sentenceAround(text: string, index: number): { start: number; end: numb
   return { start, end };
 }
 
-function analyseClaims(text: string, facts: Fact[], version: string): { claims: ClaimDiff[]; findings: Finding[] } {
+function analyseClaims(text: string, facts: Fact_[], version: string): { claims: ClaimDiff[]; findings: Finding[] } {
   const claims: ClaimDiff[] = [];
   const findings: Finding[] = [];
   const fact = (id: string) => facts.find((f) => f.id === id)!;
@@ -256,7 +260,7 @@ function analyseClaims(text: string, facts: Fact[], version: string): { claims: 
   return { claims, findings };
 }
 
-function analyse(sub: Pick<ContentSubmission, "text" | "html" | "colour_pairs" | "images">, facts: Fact[]) {
+function analyse(sub: Pick<ContentSubmission, "text" | "html" | "colour_pairs" | "images">, facts: Fact_[]) {
   const a = runLayerALocal({ text: sub.text, html: sub.html, colour_pairs: sub.colour_pairs, images: sub.images });
   const bc = analyseClaims(sub.text, facts, DEFAULT_RULE_PACK.version);
   return { findings: [...a, ...bc.findings], claims: bc.claims };
@@ -340,7 +344,7 @@ interface DB {
   seq: number;
   contents: ContentItem[];
   passports: Passport[];
-  facts: Fact[];
+  facts: Fact_[];
   constitution: Constitution;
 }
 
@@ -362,7 +366,7 @@ function makeItem(
   author: User,
   state: ContentItem["state"],
   texts: string[],
-  facts: Fact[],
+  facts: Fact_[],
 ): ContentItem {
   const versions = texts.map((text, i) => ({
     version: i + 1,
@@ -521,6 +525,50 @@ function findItem(d: DB, id: string): ContentItem {
 }
 
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
+
+
+// ---------- Ledger helpers (improvement 3) ----------
+
+function flagDependents(d: DB, factId: string, reason: string): { content: string[]; passports: string[] } {
+  const content: string[] = [];
+  const passports: string[] = [];
+  for (const item of d.contents) {
+    if (!item.claims.some((c) => c.ledger_fact_id === factId)) continue;
+    content.push(item.id);
+    item.state = "needs_rereview";
+    item.audit.push({ at: now(), actor: "System", action: "flagged", detail: reason });
+  }
+  for (const p of d.passports) {
+    if (!p.evidence.some((e) => e.fact_id === factId)) continue;
+    p.current_status = "needs_rereview";
+    p.current_status_reason = reason;
+    passports.push(p.id);
+  }
+  return { content, passports };
+}
+
+function factOut(d: DB, f: Fact_): Fact {
+  const daysLeft = Math.round((Date.parse(f.expires_at) - Date.now()) / 86_400_000);
+  return {
+    id: f.id,
+    statement: f.text,
+    metric: f.parts.metric,
+    value: Number(f.parts.value.replace(/[^\d.]/g, "")) || null,
+    unit: f.parts.value.includes("%") ? "%" : null,
+    qualifier: /up to/i.test(f.parts.value) ? "up to" : null,
+    scope: f.parts.population,
+    period: f.parts.period,
+    evidence_url: f.evidence_url,
+    owner: "Brand team",
+    expires_on: f.expires_at.slice(0, 10),
+    status: f.expired ? "expired" : "active",
+    version: (f as Fact_ & { version?: number }).version ?? 1,
+    days_left: daysLeft,
+    used_by_content: d.contents.filter((c) => c.claims.some((cl) => cl.ledger_fact_id === f.id)).map((c) => c.id),
+    used_by_passports: d.passports.filter((p) => p.evidence.some((e) => e.fact_id === f.id)).map((p) => p.id),
+    updated_at: now(),
+  };
+}
 
 // ---------- Mock API (same signatures as lib/api.ts) ----------
 
@@ -682,6 +730,56 @@ export const mock = {
       computed_fingerprint: computed,
       expected_fingerprint: p.fingerprint,
       current_status: p.current_status,
+      checked_at: now(),
+    };
+  },
+
+  async listFacts(): Promise<Fact[]> {
+    await wait();
+    const d = await getDb();
+    return d.facts.map((f) => factOut(d, f)).sort((a, b) => Number(a.status === "active") - Number(b.status === "active") || (a.days_left ?? 1e6) - (b.days_left ?? 1e6));
+  },
+
+  async updateFact(factId: string, patch: FactPatch, user: User): Promise<FactUpdateResult> {
+    await wait(200);
+    if (user.role !== "brand_manager") throw new Error("Only the Brand Manager can change facts.");
+    const d = await getDb();
+    const f = d.facts.find((x) => x.id === factId);
+    if (!f) throw new Error("Fact not found");
+    const changed: string[] = [];
+    if (patch.statement !== undefined && patch.statement !== f.text) (f.text = patch.statement), changed.push("statement");
+    if (patch.expires_on && patch.expires_on !== f.expires_at.slice(0, 10)) {
+      if (Number.isNaN(Date.parse(patch.expires_on))) throw new Error("Use a date like 2027-03-31 for the expiry.");
+      f.expires_at = new Date(patch.expires_on).toISOString();
+      changed.push("expires_on");
+    }
+    if (patch.status && (patch.status !== "active") !== f.expired) (f.expired = patch.status !== "active"), changed.push("status");
+    if (patch.value !== undefined && patch.value !== null) (f.parts = { ...f.parts, value: String(patch.value) }), changed.push("value");
+    let hit = { content: [] as string[], passports: [] as string[] };
+    if (changed.length) {
+      (f as Fact_ & { version?: number }).version = ((f as Fact_ & { version?: number }).version ?? 1) + 1;
+      hit = flagDependents(d, factId, `Approved fact ${factId} changed (${changed.join(", ")}).`);
+    }
+    persist();
+    return { fact: factOut(d, f), changed, flagged_content: hit.content, flagged_passports: hit.passports };
+  },
+
+  async lintRules(user: User): Promise<LintResult> {
+    await wait(400);
+    if (user.role !== "brand_manager") throw new Error("Only the Brand Manager can run the rule health check.");
+    const d = await getDb();
+    const rules = d.constitution.documents.flatMap((x) => x.rules).filter((r) => r.status !== "rejected");
+    const vague = rules.filter((r) => /professional|friendly|natural|approachable|appropriate|modern/i.test(r.source_passage));
+    return {
+      findings: vague.map((r) => ({
+        kind: "ambiguity" as const,
+        method: "lexical",
+        score: null,
+        explanation: "This rule relies on vague wording, so reviewers will apply it differently.",
+        rules: [{ key: r.id, id: r.id, text: r.source_passage }],
+        vague_terms: (r.source_passage.match(/professional|friendly|natural|approachable|appropriate|modern/gi) ?? []).map((w) => w.toLowerCase()),
+      })),
+      rules_checked: rules.length,
       checked_at: now(),
     };
   },

@@ -7,6 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatDate(iso: string): string {
   const d = new Date(iso);
+  if (!iso || Number.isNaN(d.getTime())) return "—";
   return d.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 }
 

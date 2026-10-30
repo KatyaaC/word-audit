@@ -254,6 +254,8 @@ export interface Passport {
   /** Can change later, e.g. when a supporting fact expires. */
   current_status: PassportStatus;
   current_status_reason?: string | null;
+  /** Brand rules version in force today; differs from guideline_version when rules changed since approval. */
+  rules_version_now?: string | null;
 }
 
 export interface VerifyResult {
@@ -330,4 +332,57 @@ export interface ExpireFactResult {
   fact_id: string;
   flagged_content: string[];
   flagged_passports: string[];
+}
+
+// ---------- Claim Ledger (improvement 3) ----------
+
+export type FactStatus = "active" | "expired" | "superseded";
+
+export interface Fact {
+  id: string;
+  statement: string;
+  metric: string;
+  value: number | null;
+  unit: string | null;
+  qualifier: string | null;
+  scope: string | null;
+  period: string | null;
+  evidence_url: string;
+  owner: string;
+  expires_on: string | null;
+  status: FactStatus;
+  version: number;
+  /** Negative once the expiry date has passed; null when there is no expiry date. */
+  days_left: number | null;
+  used_by_content: string[];
+  used_by_passports: string[];
+  updated_at: string;
+}
+
+export type FactPatch = Partial<
+  Pick<Fact, "statement" | "metric" | "value" | "unit" | "qualifier" | "scope" | "period" | "evidence_url" | "owner" | "expires_on" | "status">
+>;
+
+export interface FactUpdateResult {
+  fact: Fact;
+  changed: string[];
+  flagged_content: string[];
+  flagged_passports: string[];
+}
+
+// ---------- Rule health (Guideline Linter) ----------
+
+export interface LintFinding {
+  kind: "ambiguity" | "conflict";
+  method: string;
+  score: number | null;
+  explanation: string;
+  rules: { key: string; id: string | null; text: string }[];
+  vague_terms: string[];
+}
+
+export interface LintResult {
+  findings: LintFinding[];
+  rules_checked: number;
+  checked_at: string;
 }
