@@ -21,7 +21,7 @@ import { useAuth } from "@/lib/auth";
 import type { Classification, Constitution, Rule } from "@/lib/types";
 import { errorMessage, formatDate } from "@/lib/utils";
 
-const ACCEPT = ".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const ACCEPT = ".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
 function RuleCard({ rule, canDecide, onDecide }: { rule: Rule; canDecide: boolean; onDecide: (d: "approve" | "reject", reason: string) => Promise<void> }) {
   const [reason, setReason] = useState("");
@@ -144,7 +144,7 @@ export default function ConstitutionPage() {
         <Card>
           <CardHeader>
             <CardTitle>Add your brand guidelines</CardTitle>
-            <CardDescription>Upload a PDF or Word file. We'll suggest rules from it, and none of them go live until you approve them.</CardDescription>
+            <CardDescription>Upload a PDF, Word or text file. We'll suggest rules from it, and none of them go live until you approve them.</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">

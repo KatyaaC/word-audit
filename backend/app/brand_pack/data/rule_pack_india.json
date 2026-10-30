@@ -1,0 +1,86 @@
+{
+  "brand": "PaisaLeaf (fictional demo brand)",
+  "version": "2026.10-r1",
+  "_note": "Indian-context rule pack drafted by Katya. ASCI-inspired, not a legal reading of the ASCI Code. Verify each reason against the current ASCI Code and guidelines before the demo.",
+  "terms": [
+    {
+      "id": "BAN-001", "kind": "banned", "terms": ["guarantee"], "severity": "high", "match": "lemma",
+      "replacement": "aims to deliver",
+      "reason": "Absolute promises about results are not allowed unless the Claim Ledger holds evidence that covers every case. Inspired by ASCI Code Chapter I (truthful and honest representation).",
+      "source_ref": "Brand Guidelines v3, section 4.1 Claims"
+    },
+    {
+      "id": "BAN-002", "kind": "banned", "terms": ["risk-free", "risk free", "zero risk", "no risk"], "severity": "high", "match": "exact",
+      "replacement": "lower-risk",
+      "reason": "Financial products cannot be described as free of risk. Inspired by ASCI guidance on misleading claims in financial advertising.",
+      "source_ref": "Brand Guidelines v3, section 4.3 Financial wording"
+    },
+    {
+      "id": "BAN-003", "kind": "banned", "terms": ["100% safe", "completely safe", "totally safe"], "severity": "high", "match": "exact",
+      "replacement": "tested for safety",
+      "reason": "Absolute safety claims cannot be substantiated. Inspired by ASCI Code Chapter I.",
+      "source_ref": "Brand Guidelines v3, section 4.1 Claims"
+    },
+    {
+      "id": "BAN-004", "kind": "banned", "terms": ["cure", "miracle"], "severity": "high", "match": "lemma",
+      "replacement": "may help with",
+      "reason": "Claims that a product cures a condition need regulatory backing and are outside the brand's approved claims. Inspired by ASCI guidance on health claims.",
+      "source_ref": "Brand Guidelines v3, section 4.4 Health wording"
+    },
+    {
+      "id": "BAN-005", "kind": "banned", "terms": ["best in India", "number one", "No. 1", "#1"], "severity": "medium", "match": "exact",
+      "replacement": "a leading",
+      "reason": "Superlative or leadership claims need independent, current substantiation. Inspired by ASCI guidelines on leadership claims.",
+      "source_ref": "Brand Guidelines v3, section 4.2 Comparatives"
+    },
+    {
+      "id": "BAN-006", "kind": "banned", "terms": ["no side effects", "zero side effects"], "severity": "high", "match": "exact",
+      "replacement": "well tolerated in testing",
+      "reason": "A claim of no side effects cannot be substantiated for every user.",
+      "source_ref": "Brand Guidelines v3, section 4.4 Health wording"
+    },
+    {
+      "id": "BAN-007", "kind": "banned", "terms": ["synergy", "revolutionary", "game-changer", "game changer"], "severity": "low", "match": "exact",
+      "replacement": "useful",
+      "reason": "The brand voice is plain and specific. Hype words are off-voice.",
+      "source_ref": "Brand Voice Guide v2, page 2, Words we avoid"
+    },
+    {
+      "id": "BAN-008", "kind": "banned", "terms": ["cheapest"], "severity": "medium", "match": "exact",
+      "replacement": "affordable",
+      "reason": "Price leadership claims need a dated, like-for-like comparison.",
+      "source_ref": "Brand Guidelines v3, section 4.2 Comparatives"
+    },
+    {
+      "id": "REQ-001", "kind": "required", "terms": ["T&C apply", "T&Cs apply", "terms and conditions apply"],
+      "when_any": ["free", "offer", "cashback", "discount"], "severity": "medium", "match": "exact",
+      "replacement": null,
+      "reason": "Promotional offers must point readers to the terms that apply.",
+      "source_ref": "Brand Guidelines v3, section 5.1 Offers"
+    },
+    {
+      "id": "REQ-002", "kind": "required", "terms": ["Mutual fund investments are subject to market risks"],
+      "when_any": ["mutual fund", "SIP"], "severity": "high", "match": "exact",
+      "replacement": null,
+      "reason": "Mutual fund communication must carry the standard market-risk disclaimer.",
+      "source_ref": "Brand Guidelines v3, section 5.2 Investment disclaimers"
+    },
+    {
+      "id": "REQ-003", "kind": "required", "terms": ["past performance is not indicative of future results"],
+      "when_any": ["past returns", "historical returns"], "severity": "medium", "match": "exact",
+      "replacement": null,
+      "reason": "Any mention of past returns must say they do not predict future returns.",
+      "source_ref": "Brand Guidelines v3, section 5.2 Investment disclaimers"
+    }
+  ],
+  "tone": {
+    "max_exclamations": 1,
+    "exclamation_rule_id": "TONE-001",
+    "shouting_rule_id": "TONE-002",
+    "shouting_min_length": 4,
+    "allowed_acronyms": ["SEBI", "ASCI", "NIFTY", "WCAG", "AMFI", "NACH", "IFSC", "NEFT", "RTGS", "IMPS"],
+    "severity": "low"
+  },
+  "contrast": { "rule_id": "A11Y-001", "min_ratio": 4.5, "large_text_min_ratio": 3.0, "severity": "high" },
+  "alt_text": { "missing_rule_id": "A11Y-002", "weak_rule_id": "A11Y-003", "missing_severity": "high", "weak_severity": "medium" }
+}

@@ -8,49 +8,31 @@ so any endpoint can be built and switched on one at a time.
 All endpoints except `/auth/login`, `/passports/{id}` and `/passports/{id}/verify`
 expect `Authorization: Bearer <JWT>`. Errors return `{"detail": "<message>"}`; the UI shows `detail` as is.
 
-## Built by Katya (in `services/`)
+## Where it lives
 
-| Method | Path | Body | Returns |
-|---|---|---|---|
-| POST | `/auth/login` | `{email, password}` | `LoginResponse` |
-| GET | `/auth/me` | | `User` |
-| GET | `/layer-a/rule-pack` | | `RulePack` |
-| POST | `/layer-a/check` | `LayerACheckRequest` | `LayerACheckResponse` |
-
-Mount them in the main app:
-
-```python
-from bt_auth import router as auth_router, require_roles, current_user
-from layer_a.router import router as layer_a_router
-from layer_a import CheckRequest, run_layer_a, load_rule_pack
-
-app.include_router(auth_router)
-app.include_router(layer_a_router)
-
-# inside the review endpoint, before Layer B/C:
-layer_a_findings = run_layer_a(CheckRequest(text=text, html=html, colour_pairs=pairs, images=images), load_rule_pack())
-```
-
-Protect routes with `Depends(require_roles("approver"))` and similar.
-
-## Built by Sudiksha (expected by the UI)
+All of these are implemented in `backend/app/ui_api.py` under the `/api` prefix, so the website uses
+`NEXT_PUBLIC_API_URL=<backend>/api`. They call the existing services (review engine, Passport, impact,
+registry); the original routes in `backend/app/api.py` are unchanged.
 
 | Method | Path | Body | Returns | Notes |
 |---|---|---|---|---|
+| POST | `/auth/login` | `{email, password}` | `LoginResponse` | JWT, four demo roles |
+| GET | `/auth/me` | | `User` | |
+| POST | `/layer-a/check` | `LayerACheckRequest` | `LayerACheckResponse` | Brand rule pack only |
 | GET | `/content` | | `ContentItem[]` | Newest first |
-| POST | `/content` | `ContentSubmission` | `ContentItem` | Runs Layers A, B, C. State `draft` |
-| GET | `/content/{id}` | | `ContentItem` | `findings` are for the latest version |
-| POST | `/content/{id}/versions` | `ContentSubmission` | `ContentItem` | Author only. Re-runs all layers, clears responses and `passport_id`, state back to `draft` |
-| POST | `/content/{id}/findings/{finding_id}/response` | `{decision, reason, modified_text?}` | `ContentItem` | `reason` required (min 5 chars). Write an audit event |
-| POST | `/content/{id}/comments` | `{body}` | `ContentItem` | |
+| POST | `/content` | `ContentSubmission` | `ContentItem` | Creator. Runs the engine + brand rule pack. State `draft` |
+| GET | `/content/{id}` | | `ContentItem` | Findings are for the latest version |
+| POST | `/content/{id}/versions` | `ContentSubmission` | `ContentItem` | Author only. New version, re-checked, back to `draft` |
+| POST | `/content/{id}/findings/{finding_id}/response` | `{decision, reason, modified_text?}` | `ContentItem` | Author only, reason ≥ 5 chars |
+| POST | `/content/{id}/comments` | `{body}` | `ContentItem` | Stored in the audit log |
 | POST | `/content/{id}/transition` | `{action, reason?}` | `ContentItem` | See state machine below |
 | GET | `/passports/{id}` | | `Passport` | Public |
 | POST | `/passports/{id}/verify` | `{content?}` | `VerifyResult` | Public. No `content` = verify stored text |
-| POST | `/ledger/facts/{id}/expire` | | `ExpireFactResult` | Impact propagation |
-| GET | `/insights` | | `Insights` | Three charts + expiring facts + impact graph |
-| GET | `/constitution` | | `Constitution` | |
-| POST | `/constitution/upload` | multipart: `file`, `classification` | `ConstitutionDoc` | Drafted rules come back with `status: "draft"` |
-| POST | `/constitution/rules/{rule_id}/decision` | `{decision: "approve" \| "reject", reason}` | `Constitution` | Brand Manager only. Approval bumps the version |
+| POST | `/ledger/facts/{claim_key}/expire` | | `ExpireFactResult` | Reviewer, approver or brand manager |
+| GET | `/insights` | | `Insights` | Real counts from the database |
+| GET | `/constitution` | | `Constitution` | DB rules + the built-in rule pack |
+| POST | `/constitution/upload` | multipart: `file`, `classification` | `ConstitutionDoc` | PDF, DOCX, TXT, MD. Drafts stay inactive |
+| POST | `/constitution/rules/{rule_id}/decision` | `{decision, reason}` | `Constitution` | Brand manager. Approval releases a new rules version |
 
 ### Workflow state machine
 
@@ -79,19 +61,12 @@ One `ClaimDiff` per extracted claim. `draft` and `ledger` use the same five fiel
 
 ### Passport fingerprint
 
-Canonicalise, then SHA-256 (hex). Must match `web/lib/canonical.ts` exactly:
+SHA-256 of the content text with Windows line endings normalised, matching `backend/app/services/passport.py`
+and `web/lib/canonical.ts`:
 
 ```python
-import hashlib, re, unicodedata
-
-def canonicalize(text: str) -> str:
-    t = unicodedata.normalize("NFC", text).replace("\r\n", "\n").replace("\r", "\n")
-    lines = [re.sub(r"[ \t]+", " ", line).strip() for line in t.split("\n")]
-    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
-
-fingerprint = hashlib.sha256(canonicalize(text).encode("utf-8")).hexdigest()
+fingerprint = hashlib.sha256(text.replace("\r\n", "\n").encode("utf-8")).hexdigest()
 ```
 
-`Passport.canonical_text` is the text that was signed. `verify` recomputes the fingerprint of the
-submitted (or stored) text, compares it with the signed one, and checks the Ed25519 signature
-over the Passport payload.
+`verify` recomputes the fingerprint of the submitted (or stored) text, compares it with the signed one,
+and checks the Ed25519 signature over the Passport payload.

@@ -189,7 +189,8 @@ word-audit/
 │   │   └── data/                rule pack + synthetic test items
 │   ├── eval_layer_a.py          precision / recall on the test set
 │   └── tests/                   pytest
-├── TODO-backend-folder/         Sudiksha's backend: schema, Layers B/C, Passport, linter, parsing
+├── backend/                     Sudiksha's API: schema, Layers A/B/C, Passport, linter, parsing
+│   └── app/ui_api.py            /api routes the website uses (login, workflow, insights, rules)
 ├── docs/API_CONTRACT.md         every endpoint, the workflow state machine, the fingerprint rule
 ├── Dockerfile                   Hugging Face Space build
 └── README.md
@@ -227,7 +228,12 @@ API docs are at http://localhost:8000/docs.
 ### Backend (Layers B/C, database, Passport)
 
 ```bash
-# TODO (Sudiksha): setup, migration and run commands
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env               # optional settings (LLM key, Postgres, signing key)
+uvicorn app.main:app --reload --port 8000
 ```
 
 ### Connect the frontend to the real backend
@@ -236,7 +242,7 @@ In `web/.env.local`:
 
 ```
 NEXT_PUBLIC_USE_MOCKS=false
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
 ```
 
 ### Demo accounts

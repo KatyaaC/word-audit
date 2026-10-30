@@ -21,7 +21,7 @@ import type {
   WorkflowAction,
 } from "./types";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api").replace(/\/$/, "");
 export const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS !== "false";
 
 let token: string | null = null;
@@ -42,6 +42,16 @@ async function http<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!(init.body instanceof FormData)) headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
   const res = await fetch(`${API_URL}${path}`, { ...init, headers });
+  if (res.status === 401 && token && typeof window !== "undefined") {
+    // Session expired or the server restarted with a new secret: sign out and go back to the login page
+    setSession(null, null);
+    try {
+      localStorage.removeItem("wordaudit.session");
+    } catch {
+      /* ignore */
+    }
+    window.location.href = "/login";
+  }
   if (!res.ok) {
     let detail = res.statusText;
     try {
